@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <p class="eyebrow">Rural Operations Ledger</p>
+        <h1>Kisaan.digi</h1>
+        <p class="brand-copy">
+          A Python-based service ledger for machinery providers and farmers.
+        </p>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-link" href="#dashboard">Dashboard</a>
+        <a class="nav-link" href="#farmers">Farmers</a>
+        <a class="nav-link" href="#entry">New Entry</a>
+        <a class="nav-link" href="#payments">Payments</a>
+        <a class="nav-link" href="#vision">Vision</a>
+      </nav>
+
+      <section class="sidebar-card">
+        <p class="card-label">Why it matters</p>
+        <p>
+          The product is not just a digital notebook. It is a trust and settlement
+          tool for delayed farm machinery payments.
+        </p>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="hero">
+        <div>
+          <p class="eyebrow hero-eyebrow">Python MVP Foundation</p>
+          <h2>Build the workflow providers use every day.</h2>
+        </div>
+        <div class="hero-panel">
+          <span>Low typing</span>
+          <span>Shared visibility</span>
+          <span>Payment clarity</span>
+        </div>
+      </header>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <section class="flash-stack">
+            {% for message in messages %}
+              <div class="flash-message">{{ message }}</div>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+
+      <section class="screen active" id="dashboard">
+        <div class="stats-grid">
+          <article class="stat-card">
+            <p>Total Service Value</p>
+            <h3>Rs {{ "{:,.0f}".format(data.totals.service_value) }}</h3>
+          </article>
+          <article class="stat-card">
+            <p>Total Paid</p>
+            <h3>Rs {{ "{:,.0f}".format(data.totals.paid_value) }}</h3>
+          </article>
+          <article class="stat-card highlight">
+            <p>Outstanding Dues</p>
+            <h3>Rs {{ "{:,.0f}".format(data.totals.outstanding) }}</h3>
+          </article>
+        </div>
+
+        <div class="panel-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Top Farmers by Due</p>
+                <h3>Who needs follow-up</h3>
+              </div>
+            </div>
+
+            <div class="list-stack">
+              {% for card in data.farmer_summary %}
+                <div class="list-item">
+                  <strong>{{ card.farmer.name }}</strong>
+                  <span>{{ card.farmer.village }}</span>
+                  <span>Due: Rs {{ "{:,.0f}".format(card.totals.outstanding) }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Recent Activity</p>
+                <h3>Latest services and payments</h3>
+              </div>
+            </div>
+
+            <div class="list-stack">
+              {% for item in data.activity %}
+                <div class="list-item">
+                  <strong>{{ item.type }}: {{ item.farmer_name }}</strong>
+                  <span>{{ item.label }}</span>
+                  <span>Rs {{ "{:,.0f}".format(item.amount) }} on {{ item.activity_date }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen active" id="farmers">
+        <div class="panel full-height">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">Farmer Ledger</p>
+              <h3>Shared financial truth</h3>
+            </div>
+          </div>
+
+          <div class="farmers-layout">
+            <article class="mini-panel add-farmer-panel">
+              <p class="panel-label">Add Farmer</p>
+              <h4>Create a new farmer record</h4>
+              <form class="entry-form compact-form" action="{{ url_for('main.add_farmer') }}" method="post">
+                <label>
+                  Farmer Name
+                  <input name="name" type="text" placeholder="Enter farmer name" required />
+                </label>
+
+                <label>
+                  Village
+                  <input name="village" type="text" placeholder="Enter village name" required />
+                </label>
+
+                <button type="submit">Add Farmer</button>
+              </form>
+            </article>
+
+            <div class="ledger-grid">
+              {% for card in data.farmer_cards %}
+                <div class="ledger-card">
+                  <div class="card-top">
+                    <div>
+                      <h4>{{ card.farmer.name }}</h4>
+                      <p>{{ card.farmer.village }}</p>
+                    </div>
+                    <span class="status-badge">{{ card.status }}</span>
+                  </div>
+
+                  <div class="totals-block">
+                    <p>Total services: Rs {{ "{:,.0f}".format(card.totals.service_total) }}</p>
+                    <p>Total paid: Rs {{ "{:,.0f}".format(card.totals.payment_total) }}</p>
+                    <p><strong>Outstanding: Rs {{ "{:,.0f}".format(card.totals.outstanding) }}</strong></p>
+                  </div>
+
+                  <div class="history-block">
+                    <p class="section-title">Recent service history</p>
+                    <ul>
+                      {% if card.recent_entries %}
+                        {% for entry in card.recent_entries %}
+                          <li>{{ entry.service_type }}: {{ "{:g}".format(entry.quantity) }} {{ entry.unit_type }} - Rs {{ "{:,.0f}".format(entry.total) }}</li>
+                        {% endfor %}
+                      {% else %}
+                        <li>No service entries yet</li>
+                      {% endif %}
+                    </ul>
+                  </div>
+
+                  <form class="entry-form compact-form card-form" action="{{ url_for('main.update_farmer', farmer_id=card.farmer.id) }}" method="post">
+                    <p class="section-title">Edit farmer details</p>
+                    <label>
+                      Name
+                      <input name="name" type="text" value="{{ card.farmer.name }}" required />
+                    </label>
+
+                    <label>
+                      Village
+                      <input name="village" type="text" value="{{ card.farmer.village }}" required />
+                    </label>
+
+                    <button type="submit">Save Farmer</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen active" id="entry">
+        <div class="panel form-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">Quick Entry</p>
+              <h3>Log a machinery service</h3>
+            </div>
+          </div>
+
+          <form class="entry-form" action="{{ url_for('main.add_entry') }}" method="post">
+            <label>
+              Farmer
+              <select name="farmer_id" required>
+                {% for farmer in data.farmers %}
+                  <option value="{{ farmer.id }}">{{ farmer.name }} - {{ farmer.village }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              Service Type
+              <select name="service_type" required>
+                <option value="Ploughing">Ploughing</option>
+                <option value="Rotavator">Rotavator</option>
+                <option value="Harvester">Harvester</option>
+                <option value="Transport">Transport</option>
+                <option value="Spraying">Spraying</option>
+              </select>
+            </label>
+
+            <label>
+              Unit
+              <select name="unit_type" required>
+                <option value="acre">Acre</option>
+                <option value="hour">Hour</option>
+                <option value="trip">Trip</option>
+              </select>
+            </label>
+
+            <label>
+              Quantity
+              <input name="quantity" type="number" min="1" step="0.5" value="2" required />
+            </label>
+
+            <label>
+              Rate
+              <input name="rate" type="number" min="1" step="10" value="1500" required />
+            </label>
+
+            <label>
+              Date
+              <input name="entry_date" type="date" value="{{ data.today }}" required />
+            </label>
+
+            <button type="submit">Add Service Entry</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen active" id="payments">
+        <div class="panel-grid">
+          <article class="panel form-panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Payment Recording</p>
+                <h3>Capture partial or full settlement</h3>
+              </div>
+            </div>
+
+            <form class="entry-form" action="{{ url_for('main.add_payment') }}" method="post">
+              <label>
+                Farmer
+                <select name="farmer_id" required>
+                  {% for farmer in data.farmers %}
+                    <option value="{{ farmer.id }}">{{ farmer.name }} - {{ farmer.village }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+
+              <label>
+                Amount
+                <input name="amount" type="number" min="1" step="10" value="1000" required />
+              </label>
+
+              <label>
+                Method
+                <select name="method" required>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="UPI">UPI</option>
+                </select>
+              </label>
+
+              <label>
+                Date
+                <input name="payment_date" type="date" value="{{ data.today }}" required />
+              </label>
+
+              <button type="submit">Record Payment</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">Settlement Snapshot</p>
+                <h3>See which balances are clearing</h3>
+              </div>
+            </div>
+
+            <div class="list-stack">
+              {% for card in data.farmer_cards %}
+                <div class="list-item">
+                  <strong>{{ card.farmer.name }}</strong>
+                  <span>Status: {{ card.status }}</span>
+                  <span>Remaining due: Rs {{ "{:,.0f}".format(card.totals.outstanding if card.totals.outstanding > 0 else 0) }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen active" id="vision">
+        <div class="panel-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">What We Build First</p>
+                <h3>Focused MVP</h3>
+              </div>
+            </div>
+            <ul class="vision-list">
+              <li>Provider-led service logging</li>
+              <li>Running ledger by farmer</li>
+              <li>Payment and due clarity</li>
+              <li>Low-friction mobile experience</li>
+            </ul>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-label">What It Can Become</p>
+                <h3>Bigger rural platform</h3>
+              </div>
+            </div>
+            <ul class="vision-list">
+              <li>Booking of services</li>
+              <li>Farmer statements and reminders</li>
+              <li>Seasonal analytics</li>
+              <li>Broader rural operations workflows</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+{% endblock %}
